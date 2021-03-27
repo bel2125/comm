@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "../timing.h"
 #define MAX 256
 #define PORT 5900
 #define SA struct sockaddr
@@ -184,7 +185,7 @@ loop_msg:
 	}
 
 	uint16_t nr = ntohs(*(uint16_t*)(buf+2));
-	printf("Received %u frames\n", nr);
+	printf("Received %u update frames:\n", nr);
 	for (int32_t n = 0; n<(int32_t)nr; n++) {
 		bzero(buf, sizeof(buf));
 		readall(sockfd, buf, 12);
@@ -193,7 +194,16 @@ loop_msg:
 		uint16_t rwidth = ntohs(*(uint16_t*)(buf+4));
 		uint16_t rheigth = ntohs(*(uint16_t*)(buf+6));
 		uint32_t rencoding = ntohl(*(uint16_t*)(buf+8));
-		printf("x: [%u-%u], y: [%u-%u], %u\n", rx, rwidth, ry, rheigth, rencoding);
+		printf("  (%i) x: [%u-%u], y: [%u-%u], enc: %u\n", n, rx, rwidth, ry, rheigth, rencoding);
+		
+		if (rencoding != 0) {
+			printf("Server sent unsupported encoding %u\n", rencoding);
+			return 2;
+		}
+		if ((rx+rwidth > width) || (ry+rheigth > heigth)) {
+			printf("Server position out of screen\n");
+			return 2;
+		}
 
 		uint32_t pixels_expected = rwidth*rheigth;
 		uint32_t bytes_expected = pixels_expected*4;

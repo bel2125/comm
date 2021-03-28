@@ -2,3 +2,5 @@
 *.so
 *.log
 core
+screen*.bmp
+

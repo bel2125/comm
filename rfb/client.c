@@ -13,6 +13,9 @@
 #define PORT 5900
 #define SA struct sockaddr
 
+#include "bmp.c"
+
+static unsigned long shot_nr = 0;
 
 void readall(int sockfd, void *buf, uint32_t len)
 {
@@ -209,8 +212,20 @@ loop_msg:
 		uint32_t bytes_expected = pixels_expected*4;
 
 		readall(sockfd, maxBuffer, bytes_expected);
-		incremental = 1;
+		
+		if ((width==rwidth) && (heigth==rheigth)) {
+			incremental = 1;
+			shot_nr++;
+			char name[64];
+			sprintf(name, "screen-%04lu.bmp", shot_nr);
+			int ret = writebmp(name, width, heigth, maxBuffer);
+			printf("screenshot created: %i\n", ret);
+		}
 	}
+	
+	/* wait for next update request */
+	usleep(100);
+	
 
 	goto loop_upd;
 }

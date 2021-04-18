@@ -12,13 +12,10 @@
 #define MAX 256
 #define SA struct sockaddr
 
+#include "bmp.h"
 #include "des.h"
+#include "kbhit.h"
 
-//#include "bmp.h"
-extern int writebmp(const char *filename,
-                    uint32_t width,
-                    uint32_t height,
-                    uint32_t *pixels);
 static unsigned long shot_nr = 0;
 
 
@@ -244,6 +241,12 @@ proto(int sockfd)
 	}
 	printf("Allocated %u bytes\n", (uint32_t)width * (uint32_t)heigth * 4);
 
+
+	/* unbuffered IO will allow to use kbhit/getch */
+	setunbuffered();
+
+
+	/* incremental: do we need a full update */
 	uint8_t incremental = 0;
 
 loop_upd:
@@ -326,6 +329,21 @@ loop_msg:
 			int ret = writebmp(name, width, heigth, maxBuffer);
 			printf("screenshot created: %i\n", ret);
 		}
+	}
+
+	/* keyevent */
+	if (kbhit) {
+		uint32_t key_code = getch();
+		printf("Send key %u\n", key_code);
+		bzero(buf, sizeof(buf));
+		buf[0] = 4;
+		buf[1] = 1; /* down */
+		*(uint32_t *)(buf + 4) = htonl(key_code);
+		writeall(sockfd, buf, 8);
+		buf[1] = 0; /* up */
+		writeall(sockfd, buf, 8);
+		key_code = 0;
+		incremental = 0;
 	}
 
 	/* wait for next update request */
